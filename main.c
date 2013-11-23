@@ -77,7 +77,7 @@ int main(void)
         //
         // Delay for a bit.
         //
-        SysCtlDelay(SysCtlClockGet() / 10 / 3);
+        SysCtlDelay(SysCtlClockGet() / 20 / 3);
 
         //
         // Turn off the BLUE LED.
