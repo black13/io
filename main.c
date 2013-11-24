@@ -2,6 +2,11 @@
 //
 // io.c - Simple io world example.
 //
+// This is best run with the Teraterm terminal program. This can be found at
+// http://ttssh2.sourceforge.jp/index.html.en.
+// The icid dirvers need to be installed ww.ti.com/tool/stellaris_icdi_drivers.
+// The aims of this demo:
+// is there an equivalent of the following : ctypes stdlib and stdio.
 //*****************************************************************************
 
 #include "inc/hw_memmap.h"
@@ -14,6 +19,7 @@
 #include "driverlib/sysctl.h"
 #include "utils/uartstdio.h"
 
+
 #ifdef DEBUG
 void
 __error__(char *pcFilename, unsigned long ulLine)
@@ -24,69 +30,38 @@ __error__(char *pcFilename, unsigned long ulLine)
 int main(void)
 {
     volatile unsigned long ulLoop;
-
-    //
-    // Enable lazy stacking for interrupt handlers.  This allows floating-point
-    // instructions to be used within interrupt handlers, but at the expense of
-    // extra stack usage.
-    //
+    long delay=0;
+    unsigned char c;
     ROM_FPULazyStackingEnable();
 
-    //
-    // Set the clocking to run directly from the crystal.
-    //
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
-                       SYSCTL_OSC_MAIN);
-
-                       
-    //
-    // Enable the GPIO port that is used for the on-board LED.
-    //
+    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ | SYSCTL_OSC_MAIN);
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-
-    //
-    // Enable the GPIO pins for the LED (PF2 & PF3).  
-    //
     ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
 
-                       
-    //
-    // Initialize the UART.
-    //
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     ROM_GPIOPinConfigure(GPIO_PA0_U0RX);
     ROM_GPIOPinConfigure(GPIO_PA1_U0TX);
     ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
     UARTStdioInit(0);
 
-    //
-    // Hello!
-    //
-    UARTprintf("Hello, world!\n");
+    UARTprintf("enter text\n");
     
-    //
-    // We are finished.  Hang around doing nothing.
-    //
+    //i want to get a string and echo it back to terminal.
     while(1)
     {
-        //
-        // Turn on the BLUE LED.
-        //
+    	c = UARTgetc();
+    	UARTprintf("%d",(int)c);
+    	/*
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
 
-        //
-        // Delay for a bit.
-        //
-        SysCtlDelay(SysCtlClockGet() / 20 / 3);
+        SysCtlDelay(SysCtlClockGet() / 10 / 3);
 
-        //
-        // Turn off the BLUE LED.
-        //
+        delay = SysCtlClockGet() / 10 / 3;
+
+        UARTprintf("%d\n",delay);
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
         
-        //
-        // Delay for a bit.
-        //
         SysCtlDelay(SysCtlClockGet() / 10 / 3);
+        */
     }
 }
