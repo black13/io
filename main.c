@@ -9,16 +9,17 @@
 // is there an equivalent of the following : ctypes stdlib and stdio.
 //*****************************************************************************
 
+#include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "driverlib/debug.h"
 #include "driverlib/fpu.h"
 #include "driverlib/gpio.h"
+#include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
-#include "utils/uartstdio.h"
-
+#include "uart.h"
 
 #ifdef DEBUG
 void
@@ -27,41 +28,87 @@ __error__(char *pcFilename, unsigned long ulLine)
 }
 #endif
 
-int main(void)
+typedef unsigned char u_char;
+#define BUFFER_SIZE 16
+u_char g_ucbuffer[BUFFER_SIZE];
+unsigned long g_lindex;
+//*****************************************************************************
+//
+// The UART interrupt handler.
+//
+//*****************************************************************************
+void UARTIntHandler(void)
 {
-    volatile unsigned long ulLoop;
-    long delay=0;
-    unsigned char c;
-    ROM_FPULazyStackingEnable();
+    unsigned long ulStatus;
+    u_char c;
+    ulStatus = ROM_UARTIntStatus(UART0_BASE, true);
+    ROM_UARTIntClear(UART0_BASE, ulStatus);
 
-    ROM_SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ | SYSCTL_OSC_MAIN);
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
-
-    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-    ROM_GPIOPinConfigure(GPIO_PA0_U0RX);
-    ROM_GPIOPinConfigure(GPIO_PA1_U0TX);
-    ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-    UARTStdioInit(0);
-
-    UARTprintf("enter text\n");
-    
-    //i want to get a string and echo it back to terminal.
-    while(1)
+    while(ROM_UARTCharsAvail(UART0_BASE))
     {
-    	c = UARTgetc();
-    	UARTprintf("%d",(int)c);
-    	/*
+    	c = ROM_UARTCharGetNonBlocking(UART0_BASE);
+    	g_ucbuffer[g_lindex++ % BUFFER_SIZE] = c;
+        //ROM_UARTCharPutNonBlocking(UART0_BASE,ROM_UARTCharGetNonBlocking(UART0_BASE));
+    	ROM_UARTCharPutNonBlocking(UART0_BASE,c);
+
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
 
-        SysCtlDelay(SysCtlClockGet() / 10 / 3);
+        SysCtlDelay(SysCtlClockGet() / (1000 * 3));
 
-        delay = SysCtlClockGet() / 10 / 3;
-
-        UARTprintf("%d\n",delay);
         GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
-        
-        SysCtlDelay(SysCtlClockGet() / 10 / 3);
-        */
+
+    }
+}
+
+//*****************************************************************************
+//
+// Send a string to the UART.
+//
+//*****************************************************************************
+void UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
+{
+    while(ulCount--)
+    {
+        ROM_UARTCharPutNonBlocking(UART0_BASE, *pucBuffer++);
+    }
+}
+
+int main(void)
+{
+	//set the possition of the buffer;
+	g_lindex = 0;
+
+    ROM_FPUEnable();
+    ROM_FPULazyStackingEnable();
+
+    ROM_SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
+                       SYSCTL_XTAL_16MHZ);
+
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+
+    ROM_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_2);
+
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+    ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+
+    ROM_IntMasterEnable();
+
+    GPIOPinConfigure(GPIO_PA0_U0RX);
+    GPIOPinConfigure(GPIO_PA1_U0TX);
+    ROM_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    /*
+    ROM_UARTConfigSetExpClk(UART0_BASE, ROM_SysCtlClockGet(), 115200,
+                            (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |
+                             UART_CONFIG_PAR_NONE));
+
+    ROM_IntEnable(INT_UART0);
+    ROM_UARTIntEnable(UART0_BASE, UART_INT_RX | UART_INT_RT);
+	*/
+    UART_Init();
+
+    while(1)
+    {
+    	//lets see if we stop
     }
 }
