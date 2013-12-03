@@ -17,7 +17,7 @@ void initrb(RINGB *rbp)
 {
 	rbp->rb_hd = rbp->rb_tl = rbp->rb_buf;
 }
-
+/*
 void UART_Init()
 {
 	ROM_UARTConfigSetExpClk(UART0_BASE, ROM_SysCtlClockGet(), 115200,
@@ -32,7 +32,7 @@ void UART_Init()
 
 	//initrb(&g_ringbuffer);
 }
-
+*/
 char rb_putc(char c,RINGB *rbp)
 {
 	char *nxtp;
