@@ -69,8 +69,12 @@ UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
 // This example demonstrates how to send a string of data to the UART.
 //
 //*****************************************************************************
+
+void morse (unsigned char c);
+
 int main(void)
 {
+	u_char c;
     ROM_FPUEnable();
     ROM_FPULazyStackingEnable();
 
@@ -120,10 +124,18 @@ int main(void)
 
     while(1)
     {
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, GPIO_PIN_3);
-        SysCtlDelay(SysCtlClockGet() / 10 );
+    	while(g_lindex > 0)
+    	{
+    		g_lindex = g_lindex-- % BUFFER_SIZE;
+    		c = g_ucbuffer[g_lindex];
+    		morse(c);
+    	}
+        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, GPIO_PIN_3);
+        //SysCtlDelay(SysCtlClockGet() / 10 );
 
     	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, 0);
-    	SysCtlDelay(SysCtlClockGet() / 20 / 3);
+    	//SysCtlDelay(SysCtlClockGet() / 20 / 3);
     }
 }
+
+
