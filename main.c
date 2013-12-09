@@ -10,6 +10,12 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
+#include "cbuffer.h"
+CircularBuffer g_cb;
 
 #ifdef DEBUG
 void
@@ -18,10 +24,6 @@ __error__(char *pcFilename, unsigned long ulLine)
 }
 #endif
 
-typedef unsigned char u_char;
-#define BUFFER_SIZE 16
-u_char g_ucbuffer[BUFFER_SIZE];
-unsigned long g_lindex;
 
 #define RED_LED   GPIO_PIN_1
 #define BLUE_LED  GPIO_PIN_2
@@ -30,7 +32,7 @@ unsigned long g_lindex;
 void UARTIntHandler(void)
 {
     unsigned long ulStatus;
-    u_char c;
+    uint8_t c;
     ulStatus = ROM_UARTIntStatus(UART0_BASE, true);
 
     ROM_UARTIntClear(UART0_BASE, ulStatus);
@@ -39,24 +41,19 @@ void UARTIntHandler(void)
     {
     	c = ROM_UARTCharGetNonBlocking(UART0_BASE);
 
-    	ROM_UARTCharPutNonBlocking(UART0_BASE,c);
-        g_ucbuffer[g_lindex++ % BUFFER_SIZE] = c;
+    	circular_buffer_push(&g_cb,c);
+    	//ROM_UARTCharPutNonBlocking(UART0_BASE,c);
+
         
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
+        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
         
-        SysCtlDelay(SysCtlClockGet() / (1000 * 3));
+        //SysCtlDelay(SysCtlClockGet() / (1000 * 3));
         
-        GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
+        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
     }
 }
 
-//*****************************************************************************
-//
-// Send a string to the UART.
-//
-//*****************************************************************************
-void
-UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
+void UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
 {
     while(ulCount--)
     {
@@ -64,17 +61,13 @@ UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
     }
 }
 
-//*****************************************************************************
-//
-// This example demonstrates how to send a string of data to the UART.
-//
-//*****************************************************************************
-
 void morse (unsigned char c);
+
 
 int main(void)
 {
-	u_char c;
+	uint8_t c;
+	circular_buffer_init(&g_cb);
     ROM_FPUEnable();
     ROM_FPULazyStackingEnable();
 
@@ -124,10 +117,10 @@ int main(void)
 
     while(1)
     {
-    	while(g_lindex > 0)
+    	while((c=circular_buffer_pop(&g_cb)) != 0)
     	{
-    		g_lindex = g_lindex-- % BUFFER_SIZE;
-    		c = g_ucbuffer[g_lindex];
+    		//g_lindex = g_lindex-- % BUFFER_SIZE;
+    		//c = g_ucbuffer[g_lindex];
     		morse(c);
     	}
         //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_3, GPIO_PIN_3);

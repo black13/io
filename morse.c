@@ -1,6 +1,6 @@
 /*
  * Based upon code written by Michael M. Dodd.
- */
+*/
 /*
 **   <<< Morse Code Functions >>>
 **
@@ -21,6 +21,18 @@
 **
 ** Modified for ZTC++, TC++, & BC++ by Bob Stout
 */
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
+#include "driverlib/debug.h"
+#include "driverlib/fpu.h"
+#include "driverlib/gpio.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/rom.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/uart.h"
+
 #include <ctype.h>
 #define SPACE_MASK (1 << 15)
 #define BIT_MASK (0xfe)
@@ -29,6 +41,11 @@
 
 void note_on (int freq)        /* Turn on the tone.  */
 {
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
+
+
+
+
 	  /*
       int divisor ;
       int pio_word ;
@@ -44,6 +61,7 @@ void note_on (int freq)        /* Turn on the tone.  */
 
 void note_off (void)           /* Turn off the tone.  */
 {
+    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
 	  /*
       int pio_word ;
 
@@ -58,27 +76,44 @@ void pause (unsigned int amount)
       static unsigned int fudge_factor = 0 ;
       unsigned long ul ;
 	*/
+    SysCtlDelay(SysCtlClockGet() / (1000 * 3));
 }
 
 void send_dot (void)           /* Send a dot and a space.  */
 {
-      note_on (FREQUENCY) ;
-      pause (UNIT_TIME) ;
-      note_off () ;
-      pause (UNIT_TIME) ;
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
+	//SysCtlDelay(SysCtlClockGet() / (1000 * 3));
+	SysCtlDelay(900000);
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
+	SysCtlDelay(500000);
+	//note_on (FREQUENCY) ;
+	//pause (UNIT_TIME) ;
+	//note_off () ;
+	ROM_UARTCharPutNonBlocking(UART0_BASE,'.');
+	ROM_UARTCharPutNonBlocking(UART0_BASE,' ');
+	pause (UNIT_TIME) ;
 }
 
 void send_dash (void)          /* Send a dash and a space.  */
 {
-      note_on (FREQUENCY) ;
-      pause (UNIT_TIME * 3) ;
-      note_off () ;
-      pause (UNIT_TIME) ;
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, GPIO_PIN_1);
+	//SysCtlDelay(SysCtlClockGet() / (1000 * 3));
+	SysCtlDelay(1000000);
+	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1, 0);
+	SysCtlDelay(500000);
+	//note_on (FREQUENCY) ;
+	//pause (UNIT_TIME * 3) ;
+	//note_off () ;
+	ROM_UARTCharPutNonBlocking(UART0_BASE,'_');
+	ROM_UARTCharPutNonBlocking(UART0_BASE,' ');
+	pause (UNIT_TIME) ;
 }
 
 void ltr_space (void)          /* Produce a letter space.  */
 {
-      pause (UNIT_TIME * 2) ;
+	ROM_UARTCharPutNonBlocking(UART0_BASE,0x0A);
+	ROM_UARTCharPutNonBlocking(UART0_BASE,0x0D);
+    pause (UNIT_TIME * 2) ;
 }
 
 void word_space (void)         /* Produce a word space.  */
@@ -105,6 +140,7 @@ void morse (unsigned char ch)
       pause (0) ;                  /* Calibrate pause() function.  */
 
       c = toupper (ch) ;          /* No lower-case Morse characters.  */
+      ROM_UARTCharPutNonBlocking(UART0_BASE,c);
       c -= ' ' ;                 /* Adjust for zero-based table.  */
 
       if (c > 58)       /* If out of range, ignore it.  */
@@ -128,7 +164,7 @@ void morse (unsigned char ch)
                   c >>= 1 ;
       }  /*--- TRANSMIT EACH BIT ---*/
 
-            ltr_space () ;             /* Send a space following character. */
+      ltr_space () ;             /* Send a space following character. */
 
      /*--- TRANSMIT COMPLETE STRING ---*/
 
