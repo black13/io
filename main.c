@@ -14,8 +14,8 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "cbuffer.h"
-CircularBuffer g_cb;
+//#include "cbuffer.h"
+//CircularBuffer g_cb;
 
 #ifdef DEBUG
 void
@@ -37,7 +37,7 @@ volatile struct {
 #define BLUE_LED  GPIO_PIN_2
 #define GREEN_LED GPIO_PIN_3
 
-void UARTIntHandler(void)
+void UARTIntHandler_old(void)
 {
     unsigned long ulStatus;
     uint8_t c;
@@ -45,11 +45,11 @@ void UARTIntHandler(void)
 
     ROM_UARTIntClear(UART0_BASE, ulStatus);
 
-    while(ROM_UARTCharsAvail(UART0_BASE))
+    //while(ROM_UARTCharsAvail(UART0_BASE))
     {
-    	c = ROM_UARTCharGetNonBlocking(UART0_BASE);
+    	//c = ROM_UARTCharGetNonBlocking(UART0_BASE);
 
-    	circular_buffer_push(&g_cb,c);
+    	//circular_buffer_push(&g_cb,c);
     	//ROM_UARTCharPutNonBlocking(UART0_BASE,c);
 
         
@@ -60,6 +60,7 @@ void UARTIntHandler(void)
         //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
     }
 }
+
 
 void UARTSend(const unsigned char *pucBuffer, unsigned long ulCount)
 {
@@ -116,11 +117,73 @@ static const unsigned long g_UARTPins[8] =
 	GPIO_PIN_4 | GPIO_PIN_5, GPIO_PIN_0 | GPIO_PIN_1
 };
 
+uint8_t isrx()
+{
+	// checks if a character is present in the RX buffer
+	return (RxFifo.inptr != RxFifo.outptr);
+}
+
+uint8_t getc()
+{
+	uint8_t c;
+
+	if(!m_uartBase) return 0;
+
+	// wait until a character is present
+	while (isrx()==0)	continue;
+
+	// get a character from RX buffer
+	c = RxFifo.buff[RxFifo.outptr];
+	// increment out index
+	RxFifo.outptr = (RxFifo.outptr+1)&UART_BUFF_MASK;
+
+	return c;
+}
+void UARTIntHandler(void)
+//void UARTIntHandler(void)
+{
+	// get and clear the interrupt status
+	uint32_t status = ROM_UARTIntStatus( m_uartBase, true );
+	ROM_UARTIntClear( m_uartBase, status );
+
+	if( status & (UART_INT_RX | UART_INT_RT) )
+	{
+        while(ROM_UARTCharsAvail(m_uartBase))
+        {	// Get all the available characters from the UART
+            long lChar = ROM_UARTCharGetNonBlocking(m_uartBase);
+            if(!(((RxFifo.inptr + 1) & UART_BUFF_MASK) == RxFifo.outptr))
+            {
+                RxFifo.buff[RxFifo.inptr] = (unsigned char)(lChar & 0xFF);
+                RxFifo.inptr = (RxFifo.inptr+1)%UART_BUFF_SIZE;
+            }
+        }
+	}
+	if( status & UART_INT_TX )
+	{
+		// disable the UART interrupt
+		ROM_IntDisable(g_UARTInt[m_portNum]);
+		while(ROM_UARTSpaceAvail(m_uartBase) && !(TxFifo.outptr == TxFifo.inptr))
+		{	// place the character to the data register
+			ROM_UARTCharPutNonBlocking(m_uartBase, TxFifo.buff[TxFifo.outptr]);
+			TxFifo.outptr = (TxFifo.outptr+1)%UART_BUFF_SIZE;
+		}
+		// reenable the UART interrupt
+		ROM_IntEnable(g_UARTInt[m_portNum]);
+
+		if(TxFifo.outptr == TxFifo.inptr) //if(TX_BUFFER_EMPTY)
+        {	// If the output buffer is empty, turn off the transmit interrupt.
+            ROM_UARTIntDisable(m_uartBase, UART_INT_TX);
+        }
+	}
+}
 
 int main(void)
 {
 	uint8_t c;
-	circular_buffer_init(&g_cb);
+	//circular_buffer_init(&g_cb);
+	m_portNum = 0;
+	m_uartBase = 0;
+	TxFifo.inptr = TxFifo.outptr = RxFifo.inptr = RxFifo.outptr = 0;
     ROM_FPUEnable();
     ROM_FPULazyStackingEnable();
 
@@ -160,7 +223,8 @@ int main(void)
 
     while(1)
     {
-    	while((c=circular_buffer_pop(&g_cb)) != 0)
+    	c = getc();
+    	//while((c=circular_buffer_pop(&g_cb)) != 0)
     	{
     		//g_lindex = g_lindex-- % BUFFER_SIZE;
     		//c = g_ucbuffer[g_lindex];
