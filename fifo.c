@@ -1,7 +1,7 @@
 
 #include "fifo.h"
 
-void init_fifo(fifo *q)
+void init_fifo(fifo_t *q)
 {
   //n++;                                /* one bigger than necessary */
   //q->elem = malloc(n * sizeof(*(q->elem)));
@@ -10,7 +10,7 @@ void init_fifo(fifo *q)
   q->head = q->tail = 0;
 }
 
-void free_fifo(fifo *q)
+void free_fifo(fifo_t *q)
 {
   free(q->elem);
   //q->elem = 0;
@@ -18,12 +18,12 @@ void free_fifo(fifo *q)
   q->head = q->tail = 0;
 }
 
-int empty_fifo(fifo *q)
+int empty_fifo(fifo_t *q)
 {
   return (q->head == q->tail);
 }
 
-int add_tail(fifo *q, uint8_t item)
+int add_tail(fifo_t *q, uint8_t item)
 {
 	int new_tail = (q->tail + 1) % (q->n);
 	if (new_tail == q->head)
@@ -38,7 +38,7 @@ int add_tail(fifo *q, uint8_t item)
 	}
 }
 
-int add_head(fifo *q, uint8_t item)
+int add_head(fifo_t *q, uint8_t item)
 {
 	int new_head = q->head - 1;
 	if (new_head < 0)
@@ -57,7 +57,7 @@ int add_head(fifo *q, uint8_t item)
 	}
 }
 
-int remove_head(fifo *q,uint8_t *c)
+int remove_head(fifo_t *q,uint8_t *c)
 {
 	//uint8_t item;
 	if (empty_fifo(q))
@@ -69,7 +69,7 @@ int remove_head(fifo *q,uint8_t *c)
 	return 1;
 }
 
-int remove_tail(fifo *q,uint8_t *c)
+int remove_tail(fifo_t *q,uint8_t *c)
 {
 	int new_tail = q->tail - 1;
 	if (empty_fifo(q))
@@ -85,7 +85,7 @@ int remove_tail(fifo *q,uint8_t *c)
 	return 1;
 }
 
-int num_in_fifo(fifo *q)
+int num_in_fifo(fifo_t *q)
 {
 	int res = q->tail - q->head;
 	return (res >= 0) ? res : res + q->n;

@@ -9,14 +9,13 @@
 #include "driverlib/rom.h"
 #include "driverlib/uart.h"
 
+#include <stdint.h>
+
 #include "uart.h"
+#include "fifo.h"
 
-RINGB g_ringbuffer;
-
-void initrb(RINGB *rbp)
-{
-	rbp->rb_hd = rbp->rb_tl = rbp->rb_buf;
-}
+fifo_t g_fifo;
+fifo_t *pg_fifo = &g_fifo;
 /*
 void UART_Init()
 {
@@ -115,13 +114,6 @@ int UARTReadBuffer(unsigned char* buffer, unsigned int bufsz)
 	return index;
 }
 
-
-static const unsigned long g_ulUARTBase[8] =
-{
-    UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE,
-	UART4_BASE, UART5_BASE, UART6_BASE, UART7_BASE
-};
-
 static const unsigned long g_ulUARTInt[8] =
 {
     INT_UART0, INT_UART1, INT_UART2, INT_UART3,
@@ -130,6 +122,8 @@ static const unsigned long g_ulUARTInt[8] =
 
 void begin(void)
 {
+
+	init_fifo(&g_fifo);
 
     // Enable the GPIO port that is used for the on-board LED.
     ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
@@ -155,13 +149,38 @@ void begin(void)
                            UART_CONFIG_PAR_NONE));
 
     //my additions.
-    ROM_UARTFIFOLevelSet(g_ulUARTBase[0], UART_FIFO_TX1_8, UART_FIFO_RX1_8);
-	ROM_UARTIntDisable(g_ulUARTBase[0], 0xFFFFFFFF);
-    ROM_UARTIntEnable(g_ulUARTBase[0], UART_INT_RX | UART_INT_RT);
+    ROM_UARTFIFOLevelSet(UART0_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
+	ROM_UARTIntDisable(UART0_BASE, 0xFFFFFFFF);
+    ROM_UARTIntEnable(UART0_BASE, UART_INT_RX | UART_INT_RT);
     ROM_IntEnable(g_ulUARTInt[0]);
 
     //
     // Enable the UART operation.
     //
-    ROM_UARTEnable(g_ulUARTBase[0]);
+    ROM_UARTEnable(UART0_BASE);
+}
+
+
+void UARTIntHandler(void)
+{
+    unsigned long ulStatus;
+    uint8_t c;
+    ulStatus = ROM_UARTIntStatus(UART0_BASE, true);
+
+    ROM_UARTIntClear(UART0_BASE, ulStatus);
+
+    while(ROM_UARTCharsAvail(UART0_BASE))
+    {
+    	c = ROM_UARTCharGetNonBlocking(UART0_BASE);
+
+    	add_tail(&g_fifo,c);
+    	//ROM_UARTCharPutNonBlocking(UART0_BASE,c);
+
+
+        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
+
+        //SysCtlDelay(SysCtlClockGet() / (1000 * 3));
+
+        //GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, 0);
+    }
 }
