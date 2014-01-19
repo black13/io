@@ -36,5 +36,6 @@ typedef struct ringb {
 
 void UART_Init();
 
+void begin(void);
 
 #endif /* UART_H_ */
