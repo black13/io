@@ -42,21 +42,6 @@
 void note_on (int freq)        /* Turn on the tone.  */
 {
 	GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_2, GPIO_PIN_2);
-
-
-
-
-	  /*
-      int divisor ;
-      int pio_word ;
-
-      divisor = (int)(CLK_FREQ / (long)(freq)) ;
-      outp (CTC_CMD, SETUP) ;
-      outp (CTC_DATA, divisor & 0xFF) ;
-      outp (CTC_DATA, divisor >> 8) ;
-      pio_word = inp (PIO) ;
-      outp (PIO, pio_word | TONE_ON) ;
-      */
 }
 
 void note_off (void)           /* Turn off the tone.  */

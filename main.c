@@ -14,11 +14,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "cbuffer.h"
 #include "uart.h"
 #include "fifo.h"
 
-//CircularBuffer g_cb;
 extern fifo_t *pg_fifo;
 #ifdef DEBUG
 void
@@ -32,19 +30,15 @@ void morse (unsigned char c);
 int main(void)
 {
 	uint8_t c;
-	//circular_buffer_init(&g_cb);
-    ROM_FPUEnable();
+	ROM_FPUEnable();
     ROM_FPULazyStackingEnable();
 
     begin();
 
     while(1)
     {
-    	//while((c=circular_buffer_pop(&g_cb)) != 0)
     	if(!empty_fifo(pg_fifo))
     	{
-    		//g_lindex = g_lindex-- % BUFFER_SIZE;
-    		//c = g_ucbuffer[g_lindex];
     		remove_head(pg_fifo,&c);
     		morse(c);
     	}
